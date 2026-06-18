@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Alexandria">
+  <meta name="theme-color" content="#8b1a1a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+  <title>Alexandria</title>
+</head>
+<body>
+
+  <!-- ══ HOME SCREEN ══════════════════════════════════════ -->
+  <div class="screen" id="screen-home">
+    <div class="safe-top"></div>
+    <div class="topbar">
+      <div class="topbar-right">
+        <button class="night-btn" id="night-toggle" aria-label="Toggle night mode">☽</button>
+        <div class="coin-badge">⬡ <span id="coin-count">0</span></div>
+      </div>
+    </div>
+    <div class="logo-block">
+      <div class="logo-emblem">
+        <svg viewBox="0 0 56 56" fill="none" id="logo-svg">
+          <polygon points="28,3 53,48 3,48" stroke="#8b1a1a" stroke-width="1.5" fill="none"/>
+          <line x1="28" y1="3" x2="28" y2="48" stroke="#8b1a1a" stroke-width="0.75" opacity="0.4"/>
+          <line x1="3" y1="48" x2="53" y2="48" stroke="#8b1a1a" stroke-width="0.75" opacity="0.4"/>
+          <circle cx="28" cy="27" r="7" stroke="#8b1a1a" stroke-width="1" fill="none" opacity="0.6"/>
+          <circle cx="28" cy="27" r="2" fill="#8b1a1a" opacity="0.85"/>
+        </svg>
+      </div>
+      <div class="logo-title">ALEXANDRIA</div>
+      <div class="logo-sub">Knowledge is the only light</div>
+    </div>
+    <div class="divider"></div>
+    <div class="scroll-area">
+      <div class="home-buttons">
+        <button class="main-btn" id="btn-random">
+          <span class="btn-icon">◈</span>
+          <div class="btn-title">RANDOM</div>
+          <div class="btn-desc">A read from the full library — philosophy or science, chosen for you</div>
+        </button>
+        <button class="main-btn" id="btn-topic">
+          <span class="btn-icon">◉</span>
+          <div class="btn-title">TOPIC</div>
+          <div class="btn-desc">Choose philosophy or science, then explore within</div>
+        </button>
+        <button class="main-btn" id="btn-challenge">
+          <span class="btn-icon">⚔</span>
+          <div class="btn-title">CHALLENGE</div>
+          <div class="btn-desc">Find the flaw — identify what is wrong or misleading</div>
+        </button>
+      </div>
+      <div class="streak-row">
+        <div class="streak-item">
+          <span class="streak-val" id="stat-coins">0</span>
+          <span class="streak-lbl">Coins</span>
+        </div>
+        <div class="streak-sep"></div>
+        <div class="streak-item">
+          <span class="streak-val" id="stat-streak">0</span>
+          <span class="streak-lbl">Streak</span>
+        </div>
+        <div class="streak-sep"></div>
+        <div class="streak-item">
+          <span class="streak-val" id="stat-reads">0</span>
+          <span class="streak-lbl">Reads</span>
+        </div>
+      </div>
+    </div>
+    <div class="safe-bottom"></div>
+  </div>
+
+  <!-- ══ TOPIC SCREEN ═════════════════════════════════════ -->
+  <div class="screen hidden" id="screen-topic">
+    <div class="safe-top"></div>
+    <div class="topbar">
+      <button class="back-btn" data-target="home">←</button>
+      <div class="topbar-right">
+        <div class="coin-badge">⬡ <span class="coin-count-mirror">0</span></div>
+      </div>
+    </div>
+    <div class="logo-block" style="padding: 8px 20px 10px;">
+      <div class="logo-title" style="font-size:18px;">ALEXANDRIA</div>
+    </div>
+    <div class="divider"></div>
+    <div class="topic-pills">
+      <button class="pill active" data-domain="philosophy">Philosophy</button>
+      <button class="pill" data-domain="science">Science</button>
+    </div>
+    <div class="scroll-area">
+      <div class="reads-list" id="topic-reads-list">
+        <!-- populated by JS -->
+      </div>
+    </div>
+    <div class="safe-bottom"></div>
+  </div>
+
+  <!-- ══ READ SCREEN ══════════════════════════════════════ -->
+  <div class="screen hidden" id="screen-read">
+    <div class="safe-top"></div>
+    <div class="topbar">
+      <button class="back-btn" id="read-back-btn">←</button>
+      <div class="topbar-right">
+        <div class="coin-badge">⬡ <span class="coin-count-mirror">0</span></div>
+      </div>
+    </div>
+    <div class="scroll-area" id="read-scroll">
+      <div class="read-header">
+        <div class="read-title" id="read-title"></div>
+        <div class="read-meta">
+          <span class="read-tag" id="read-category"></span>
+          <span class="read-time" id="read-time"></span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <br>
+      <div class="read-body" id="read-body"></div>
+      <div class="audio-bar" id="audio-bar">
+        <button class="audio-play-btn" id="audio-play-btn">▶</button>
+        <div class="audio-track">
+          <div class="audio-fill" id="audio-fill"></div>
+        </div>
+        <span class="audio-label" id="audio-label">Listen</span>
+      </div>
+      <div class="quiz-section" id="quiz-section">
+        <div class="quiz-eyebrow">Check your understanding</div>
+        <div class="quiz-q" id="quiz-question"></div>
+        <div class="quiz-options" id="quiz-options"></div>
+      </div>
+      <button class="action-btn" id="quiz-submit-btn" disabled>CONFIRM ANSWER</button>
+      <div style="height: 32px;"></div>
+    </div>
+    <div class="safe-bottom"></div>
+  </div>
+
+  <!-- ══ CHALLENGE SCREEN ═════════════════════════════════ -->
+  <div class="screen hidden" id="screen-challenge">
+    <div class="safe-top"></div>
+    <div class="topbar">
+      <button class="back-btn" data-target="home">←</button>
+      <div class="topbar-right">
+        <div class="coin-badge">⬡ <span class="coin-count-mirror">0</span></div>
+      </div>
+    </div>
+    <div class="logo-block" style="padding: 6px 20px 8px;">
+      <div class="logo-title" style="font-size:16px; letter-spacing:0.2em;">CHALLENGE</div>
+    </div>
+    <div class="divider"></div>
+    <div class="challenge-instruction">Select text, then tag it. Find every flaw.</div>
+    <div class="tag-row">
+      <button class="tag-btn wrong" id="tag-wrong">✕ Wrong</button>
+      <button class="tag-btn misleading" id="tag-misleading">~ Misleading</button>
+      <button class="tag-btn correct" id="tag-correct">✓ Correct</button>
+    </div>
+    <div class="scroll-area">
+      <div class="challenge-body" id="challenge-body"></div>
+      <button class="action-btn" id="challenge-submit-btn">DONE — SEE RESULTS</button>
+      <div style="height: 32px;"></div>
+    </div>
+    <div class="safe-bottom"></div>
+  </div>
+
+  <!-- ══ RESULTS SCREEN ═══════════════════════════════════ -->
+  <div class="screen hidden" id="screen-results">
+    <div class="safe-top"></div>
+    <div class="topbar">
+      <button class="back-btn" data-target="home">←</button>
+    </div>
+    <div class="logo-block" style="padding: 6px 20px 8px;">
+      <div class="logo-title" style="font-size:16px; letter-spacing:0.2em;">RESULTS</div>
+    </div>
+    <div class="divider"></div>
+    <div class="scroll-area">
+      <div class="results-summary">
+        <div class="score-circle">
+          <span class="score-num" id="score-num">0/0</span>
+        </div>
+        <div class="score-text" id="score-text"></div>
+      </div>
+      <div class="result-blocks" id="result-blocks"></div>
+      <div class="coin-reward" id="coin-reward" style="display:none;">⬡ +1 coin earned</div>
+      <button class="action-btn" data-target="home" id="results-home-btn">BACK TO LIBRARY</button>
+      <div style="height: 32px;"></div>
+    </div>
+    <div class="safe-bottom"></div>
+  </div>
+
+  <!-- ══ TOAST ════════════════════════════════════════════ -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

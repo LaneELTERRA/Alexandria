@@ -1,0 +1,13 @@
+{
+  "name": "alexandria",
+  "version": "1.0.0",
+  "description": "ALEXANDRIA — Knowledge app sourcing tools",
+  "scripts": {
+    "generate": "node sourcing/generate.js",
+    "update": "node sourcing/generate.js --update"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
