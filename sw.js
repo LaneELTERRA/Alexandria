@@ -5,13 +5,13 @@
 
 const CACHE_NAME = 'alexandria-v1';
 const ASSETS = [
-  '/alexandria/',
-  '/alexandria/index.html',
-  '/alexandria/app.js',
-  '/alexandria/styles.css',
-  '/alexandria/data/reads.json',
-  '/alexandria/data/challenges.json',
-  '/alexandria/manifest.json',
+  '/Alexandria/',
+  '/Alexandria/index.html',
+  '/Alexandria/app.js',
+  '/Alexandria/styles.css',
+  '/Alexandria/data/reads.json',
+  '/Alexandria/data/challenges.json',
+  '/Alexandria/manifest.json',
   'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400&display=swap'
 ];
 
@@ -53,7 +53,7 @@ self.addEventListener('fetch', event => {
       }).catch(() => {
         // Offline fallback for HTML
         if (event.request.destination === 'document') {
-          return caches.match('/alexandria/index.html');
+          return caches.match('/Alexandria/index.html');
         }
       });
     })

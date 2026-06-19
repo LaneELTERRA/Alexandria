@@ -2,7 +2,7 @@
   "name": "Alexandria",
   "short_name": "Alexandria",
   "description": "Knowledge is the only light",
-  "start_url": "/alexandria/",
+  "start_url": "/Alexandria/",
   "display": "standalone",
   "background_color": "#e8dcc8",
   "theme_color": "#8b1a1a",
