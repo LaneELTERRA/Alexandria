@@ -3,7 +3,7 @@
 // Caches all assets for offline use
 // ============================================
 
-const CACHE_NAME = 'alexandria-v1';
+const CACHE_NAME = 'alexandria-v2';
 const ASSETS = [
   '/Alexandria/',
   '/Alexandria/index.html',
