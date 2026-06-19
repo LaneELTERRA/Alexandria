@@ -55,6 +55,11 @@
           <div class="btn-title">CHALLENGE</div>
           <div class="btn-desc">Find the flaw — identify what is wrong or misleading</div>
         </button>
+        <button class="main-btn" id="btn-library">
+          <span class="btn-icon">📖</span>
+          <div class="btn-title">MY LIBRARY</div>
+          <div class="btn-desc">Topics you have studied and passed</div>
+        </button>
       </div>
       <div class="streak-row">
         <div class="streak-item">
@@ -71,6 +76,10 @@
           <span class="streak-val" id="stat-reads">0</span>
           <span class="streak-lbl">Reads</span>
         </div>
+      </div>
+      <div style="height:16px;"></div>
+      <div class="impressum-link-row">
+        <a href="#" id="impressum-link">Impressum</a>
       </div>
     </div>
     <div class="safe-bottom"></div>
@@ -94,9 +103,7 @@
       <button class="pill" data-domain="science">Science</button>
     </div>
     <div class="scroll-area">
-      <div class="reads-list" id="topic-reads-list">
-        <!-- populated by JS -->
-      </div>
+      <div class="reads-list" id="topic-reads-list"></div>
     </div>
     <div class="safe-bottom"></div>
   </div>
@@ -128,12 +135,16 @@
         </div>
         <span class="audio-label" id="audio-label">Listen</span>
       </div>
+      <!-- Quiz section — questions rendered here by JS -->
       <div class="quiz-section" id="quiz-section">
         <div class="quiz-eyebrow">Check your understanding</div>
-        <div class="quiz-q" id="quiz-question"></div>
-        <div class="quiz-options" id="quiz-options"></div>
+        <div id="quiz-container"></div>
       </div>
+      <!-- Quiz result shown after all 3 answered -->
+      <div id="quiz-result" style="display:none;"></div>
       <button class="action-btn" id="quiz-submit-btn" disabled>CONFIRM ANSWER</button>
+      <!-- Study Again shown on fail -->
+      <button class="action-btn study-again-btn hidden" id="study-again-btn">STUDY AGAIN</button>
       <div style="height: 32px;"></div>
     </div>
     <div class="safe-bottom"></div>
@@ -185,8 +196,56 @@
       </div>
       <div class="result-blocks" id="result-blocks"></div>
       <div class="coin-reward" id="coin-reward" style="display:none;">⬡ +1 coin earned</div>
-      <button class="action-btn" data-target="home" id="results-home-btn">BACK TO LIBRARY</button>
+      <button class="action-btn" id="results-home-btn">BACK TO LIBRARY</button>
       <div style="height: 32px;"></div>
+    </div>
+    <div class="safe-bottom"></div>
+  </div>
+
+  <!-- ══ MY LIBRARY SCREEN ════════════════════════════════ -->
+  <div class="screen hidden" id="screen-library">
+    <div class="safe-top"></div>
+    <div class="topbar">
+      <button class="back-btn" data-target="home">←</button>
+      <div class="topbar-right">
+        <div class="coin-badge">⬡ <span class="coin-count-mirror">0</span></div>
+      </div>
+    </div>
+    <div class="logo-block" style="padding: 6px 20px 10px;">
+      <div class="logo-title" style="font-size:18px;">MY LIBRARY</div>
+      <div class="logo-sub">Topics you have mastered</div>
+    </div>
+    <div class="divider"></div>
+    <div class="scroll-area">
+      <div class="reads-list" id="library-list"></div>
+    </div>
+    <div class="safe-bottom"></div>
+  </div>
+
+  <!-- ══ IMPRESSUM SCREEN ═════════════════════════════════ -->
+  <div class="screen hidden" id="screen-impressum">
+    <div class="safe-top"></div>
+    <div class="topbar">
+      <button class="back-btn" data-target="home">←</button>
+    </div>
+    <div class="logo-block" style="padding: 6px 20px 8px;">
+      <div class="logo-title" style="font-size:16px; letter-spacing:0.2em;">IMPRESSUM</div>
+    </div>
+    <div class="divider"></div>
+    <div class="scroll-area">
+      <div class="impressum-body">
+        <p><strong>Angaben gemäß § 5 TMG</strong></p>
+        <p>Noah Lane<br>
+        Schneiderhofstraße 21, Haar<br>
+        Deutschland</p>
+        <p><strong>Kontakt</strong><br>
+        E-Mail: info@noahlane.de</p>
+        <p><strong>Inhaltlich verantwortlich</strong><br>
+        Noah Lane (Anschrift wie oben)</p>
+        <p><strong>Haftungsausschluss</strong><br>
+        Die Inhalte dieser App wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte wird keine Gewähr übernommen.</p>
+        <p style="font-size:13px; opacity:0.5; margin-top:24px;">ALEXANDRIA — laneelterra.github.io/Alexandria</p>
+      </div>
     </div>
     <div class="safe-bottom"></div>
   </div>

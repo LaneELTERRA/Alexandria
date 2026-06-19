@@ -1,5 +1,6 @@
 // ============================================
-// ALEXANDRIA — App Logic
+// ALEXANDRIA — App Logic v2
+// Sequential quiz, knowledge library, impressum
 // ============================================
 
 'use strict';
@@ -11,23 +12,25 @@ const STATE = {
   currentRead: null,
   currentChallenge: null,
   currentDomain: 'philosophy',
-  readSource: 'random', // 'random' | 'topic'
-  selectedAnswer: null,
-  quizAnswered: false,
-  highlights: [], // { range, type, text }
+  readSource: 'random',
+  // Quiz state
+  quizCurrentIndex: 0,
+  quizAnswers: [],       // array of {selected, correct} per question
+  quizDone: false,
+  // Challenge state
+  highlights: [],
   activeTag: null,
-  speech: null,
-  speechWords: [],
-  speechWordIndex: 0,
+  // User data
   coins: 0,
   streak: 0,
   totalReads: 0,
   lastReadDate: null,
+  knowledgeLibrary: [], // array of {id, title, domain, category, passedAt}
   nightMode: false,
   language: 'en'
 };
 
-// ── Storage helpers ────────────────────────────────────────────
+// ── Storage ────────────────────────────────────────────────────
 function saveStorage() {
   localStorage.setItem('alex_coins', STATE.coins);
   localStorage.setItem('alex_streak', STATE.streak);
@@ -35,6 +38,7 @@ function saveStorage() {
   localStorage.setItem('alex_lastread', STATE.lastReadDate || '');
   localStorage.setItem('alex_night', STATE.nightMode ? '1' : '0');
   localStorage.setItem('alex_lang', STATE.language);
+  localStorage.setItem('alex_library', JSON.stringify(STATE.knowledgeLibrary));
 }
 
 function loadStorage() {
@@ -44,18 +48,17 @@ function loadStorage() {
   STATE.lastReadDate = localStorage.getItem('alex_lastread') || null;
   STATE.nightMode = localStorage.getItem('alex_night') === '1';
   STATE.language = localStorage.getItem('alex_lang') || 'en';
+  try {
+    STATE.knowledgeLibrary = JSON.parse(localStorage.getItem('alex_library') || '[]');
+  } catch(e) { STATE.knowledgeLibrary = []; }
 }
 
-// ── Streak logic ───────────────────────────────────────────────
+// ── Streak ─────────────────────────────────────────────────────
 function updateStreak() {
   const today = new Date().toDateString();
-  if (STATE.lastReadDate === today) return; // already read today
+  if (STATE.lastReadDate === today) return;
   const yesterday = new Date(Date.now() - 86400000).toDateString();
-  if (STATE.lastReadDate === yesterday) {
-    STATE.streak += 1;
-  } else {
-    STATE.streak = 1; // reset
-  }
+  STATE.streak = STATE.lastReadDate === yesterday ? STATE.streak + 1 : 1;
   STATE.lastReadDate = today;
 }
 
@@ -64,7 +67,6 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   const target = document.getElementById('screen-' + id);
   if (target) target.classList.remove('hidden');
-  // scroll to top
   const scroll = target ? target.querySelector('.scroll-area') : null;
   if (scroll) scroll.scrollTop = 0;
 }
@@ -73,16 +75,14 @@ function showScreen(id) {
 function applyNightMode() {
   document.body.classList.toggle('night', STATE.nightMode);
   document.getElementById('night-toggle').textContent = STATE.nightMode ? '☀' : '☽';
-  // update logo SVG stroke color
-  const strokes = document.querySelectorAll('#logo-svg polygon, #logo-svg line, #logo-svg circle');
   const col = STATE.nightMode ? '#7eb8d4' : '#8b1a1a';
-  strokes.forEach(el => {
+  document.querySelectorAll('#logo-svg polygon, #logo-svg line, #logo-svg circle').forEach(el => {
     if (el.hasAttribute('stroke')) el.setAttribute('stroke', col);
     if (el.hasAttribute('fill') && el.getAttribute('fill') !== 'none') el.setAttribute('fill', col);
   });
 }
 
-// ── Coin display ───────────────────────────────────────────────
+// ── Coin / stats display ───────────────────────────────────────
 function updateCoinDisplay() {
   document.getElementById('coin-count').textContent = STATE.coins;
   document.getElementById('stat-coins').textContent = STATE.coins;
@@ -96,7 +96,7 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+  setTimeout(() => t.classList.remove('show'), 2400);
 }
 
 // ── Load data ──────────────────────────────────────────────────
@@ -108,8 +108,7 @@ async function loadData() {
     ]);
     STATE.reads = await rRes.json();
     STATE.challenges = await cRes.json();
-  } catch (e) {
-    console.error('Failed to load data:', e);
+  } catch(e) {
     STATE.reads = [];
     STATE.challenges = [];
   }
@@ -135,24 +134,20 @@ function renderTopicList(domain) {
   const list = document.getElementById('topic-reads-list');
   const reads = getReadsForDomain(domain);
   list.innerHTML = '';
-
   if (!reads.length) {
-    list.innerHTML = `<div class="empty-state"><p>No reads available yet.<br>Run the sourcing script to generate content.</p></div>`;
+    list.innerHTML = `<div class="empty-state"><p>No reads available yet.</p></div>`;
     return;
   }
-
   reads.forEach(read => {
+    const passed = STATE.knowledgeLibrary.some(l => l.id === read.id);
     const card = document.createElement('div');
     card.className = 'read-card';
     card.innerHTML = `
-      <div class="card-cat">${read.domain} · ${read.category || ''}</div>
+      <div class="card-cat">${read.domain} · ${read.category || ''}${passed ? ' ✓' : ''}</div>
       <div class="card-title">${read.title}</div>
       <div class="card-meta">${read.readTimeMinutes ? '~' + read.readTimeMinutes + ' min read' : ''}</div>
     `;
-    card.addEventListener('click', () => {
-      STATE.readSource = 'topic';
-      openRead(read);
-    });
+    card.addEventListener('click', () => { STATE.readSource = 'topic'; openRead(read); });
     list.appendChild(card);
   });
 }
@@ -160,68 +155,88 @@ function renderTopicList(domain) {
 // ── Open read ──────────────────────────────────────────────────
 function openRead(read) {
   STATE.currentRead = read;
-  STATE.selectedAnswer = null;
-  STATE.quizAnswered = false;
+  STATE.quizCurrentIndex = 0;
+  STATE.quizAnswers = [];
+  STATE.quizDone = false;
   stopSpeech();
 
   document.getElementById('read-title').textContent = read.title;
   document.getElementById('read-category').textContent = read.category || read.domain;
   document.getElementById('read-time').textContent = read.readTimeMinutes ? '~' + read.readTimeMinutes + ' min read' : '';
 
-  // Render body as paragraphs
   const body = document.getElementById('read-body');
   const paragraphs = read.body.split('\n').filter(p => p.trim().length > 0);
   body.innerHTML = paragraphs.map(p => `<p>${p}</p>`).join('');
 
-  // Back button target
   document.getElementById('read-back-btn').setAttribute('data-target',
     STATE.readSource === 'topic' ? 'topic' : 'home');
 
-  // Quiz — show first question
-  renderQuiz(read.questions[0], 0);
-
-  // Reset audio
   document.getElementById('audio-fill').style.width = '0%';
   document.getElementById('audio-label').textContent = 'Listen';
   document.getElementById('audio-play-btn').textContent = '▶';
 
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-result').innerHTML = '';
+  document.getElementById('study-again-btn').classList.add('hidden');
+
+  renderCurrentQuestion();
   showScreen('read');
 }
 
-// ── Render quiz ────────────────────────────────────────────────
-function renderQuiz(question, index) {
-  if (!question) return;
-  document.getElementById('quiz-question').textContent = question.q;
+// ── Quiz: render current question ──────────────────────────────
+function renderCurrentQuestion() {
+  const read = STATE.currentRead;
+  const questions = read.questions;
+  const index = STATE.quizCurrentIndex;
+  const container = document.getElementById('quiz-container');
+  const submitBtn = document.getElementById('quiz-submit-btn');
 
-  const optContainer = document.getElementById('quiz-options');
-  optContainer.innerHTML = '';
+  if (index >= questions.length) {
+    showQuizResults();
+    return;
+  }
 
-  question.options.forEach((opt, i) => {
+  const q = questions[index];
+  container.innerHTML = `
+    <div class="quiz-progress">${index + 1} / ${questions.length}</div>
+    <div class="quiz-q" id="quiz-question">${q.q}</div>
+    <div class="quiz-options" id="quiz-options"></div>
+  `;
+
+  const optContainer = container.querySelector('.quiz-options');
+  q.options.forEach((opt, i) => {
     const btn = document.createElement('button');
     btn.className = 'quiz-opt';
     btn.textContent = opt;
     btn.addEventListener('click', () => {
-      if (STATE.quizAnswered) return;
-      STATE.selectedAnswer = i;
-      document.querySelectorAll('.quiz-opt').forEach(b => b.classList.remove('selected'));
+      optContainer.querySelectorAll('.quiz-opt').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
-      document.getElementById('quiz-submit-btn').disabled = false;
+      btn.dataset.index = i;
+      submitBtn.disabled = false;
+      submitBtn.dataset.selected = i;
     });
     optContainer.appendChild(btn);
   });
 
-  document.getElementById('quiz-submit-btn').disabled = true;
+  submitBtn.disabled = true;
+  submitBtn.textContent = index < questions.length - 1 ? 'NEXT QUESTION' : 'SEE RESULTS';
+  submitBtn.classList.remove('hidden');
 }
 
-// ── Submit quiz ────────────────────────────────────────────────
-function submitQuiz() {
-  if (STATE.selectedAnswer === null || STATE.quizAnswered) return;
+// ── Quiz: confirm answer and advance ──────────────────────────
+function confirmAnswer() {
   const read = STATE.currentRead;
-  const question = read.questions[0];
-  const correct = question.correct;
-  const selected = STATE.selectedAnswer;
-  STATE.quizAnswered = true;
+  const questions = read.questions;
+  const index = STATE.quizCurrentIndex;
+  const submitBtn = document.getElementById('quiz-submit-btn');
+  const selected = parseInt(submitBtn.dataset.selected);
 
+  if (isNaN(selected)) return;
+
+  const q = questions[index];
+  const correct = q.correct;
+
+  // Show correct/wrong on current options
   const opts = document.querySelectorAll('.quiz-opt');
   opts.forEach((btn, i) => {
     btn.disabled = true;
@@ -229,204 +244,187 @@ function submitQuiz() {
     else if (i === selected && selected !== correct) btn.classList.add('wrong-answer');
   });
 
-  document.getElementById('quiz-submit-btn').disabled = true;
-  document.getElementById('quiz-submit-btn').textContent = selected === correct ? '✓ CORRECT' : '✗ INCORRECT';
+  STATE.quizAnswers.push({ selected, correct, wasCorrect: selected === correct });
+  STATE.quizCurrentIndex++;
+  submitBtn.disabled = true;
 
-  if (selected === correct) {
-    // Award coin + update stats
+  // Brief pause then advance
+  setTimeout(() => {
+    renderCurrentQuestion();
+  }, 800);
+}
+
+// ── Quiz: show final results ───────────────────────────────────
+function showQuizResults() {
+  const answers = STATE.quizAnswers;
+  const correctCount = answers.filter(a => a.wasCorrect).length;
+  const total = answers.length;
+  const passed = correctCount >= 2;
+
+  const submitBtn = document.getElementById('quiz-submit-btn');
+  submitBtn.classList.add('hidden');
+
+  const resultEl = document.getElementById('quiz-result');
+  resultEl.style.display = 'block';
+
+  if (passed) {
+    resultEl.innerHTML = `
+      <div class="quiz-pass">
+        <div class="quiz-pass-icon">✓</div>
+        <div class="quiz-pass-title">Congratulations!</div>
+        <div class="quiz-pass-sub">You passed — ${correctCount}/${total} correct</div>
+        <div class="quiz-pass-coin">⬡ +1 coin earned</div>
+      </div>
+    `;
+    // Award coin and add to library
     STATE.coins += 1;
     STATE.totalReads += 1;
     updateStreak();
+    // Add to knowledge library if not already there
+    const read = STATE.currentRead;
+    if (!STATE.knowledgeLibrary.some(l => l.id === read.id)) {
+      STATE.knowledgeLibrary.push({
+        id: read.id,
+        title: read.title,
+        domain: read.domain,
+        category: read.category || read.domain,
+        passedAt: new Date().toISOString()
+      });
+    }
     saveStorage();
     updateCoinDisplay();
-    setTimeout(() => showToast('⬡ +1 coin — well read'), 400);
+    setTimeout(() => showToast('⬡ +1 coin — added to your library'), 300);
   } else {
-    setTimeout(() => showToast('Not quite — read on and try again next time'), 400);
+    resultEl.innerHTML = `
+      <div class="quiz-fail">
+        <div class="quiz-fail-icon">✗</div>
+        <div class="quiz-fail-title">${correctCount}/${total} correct</div>
+        <div class="quiz-fail-sub">2 correct answers needed to pass. Read again and try later.</div>
+      </div>
+    `;
+    document.getElementById('study-again-btn').classList.remove('hidden');
   }
 }
 
 // ── Audio / Web Speech ─────────────────────────────────────────
 function stopSpeech() {
-  if (window.speechSynthesis) {
-    window.speechSynthesis.cancel();
-  }
-  STATE.speech = null;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
   document.getElementById('audio-play-btn').textContent = '▶';
   document.getElementById('audio-fill').style.width = '0%';
   document.getElementById('audio-label').textContent = 'Listen';
 }
 
 function toggleSpeech() {
-  if (!window.speechSynthesis) {
-    showToast('Speech not supported on this device');
-    return;
-  }
-
+  if (!window.speechSynthesis) { showToast('Speech not supported'); return; }
   if (window.speechSynthesis.speaking) {
     window.speechSynthesis.cancel();
     document.getElementById('audio-play-btn').textContent = '▶';
     document.getElementById('audio-label').textContent = 'Listen';
     return;
   }
-
   const read = STATE.currentRead;
   if (!read) return;
-
   const utterance = new SpeechSynthesisUtterance(read.body);
   utterance.rate = 0.92;
-  utterance.pitch = 1.0;
-
-  // Try to pick a natural voice
   const voices = window.speechSynthesis.getVoices();
   const preferred = voices.find(v =>
-    v.name.includes('Samantha') ||
-    v.name.includes('Karen') ||
-    v.name.includes('Daniel') ||
-    v.name.includes('Google UK') ||
-    (v.lang === 'en-GB' && v.localService)
+    v.name.includes('Samantha') || v.name.includes('Karen') ||
+    v.name.includes('Daniel') || (v.lang === 'en-GB' && v.localService)
   );
   if (preferred) utterance.voice = preferred;
+
+  const wordCount = read.body.split(' ').length;
+  const totalSeconds = wordCount / 2.5;
+  let elapsed = 0;
+  const interval = setInterval(() => {
+    if (!window.speechSynthesis.speaking) { clearInterval(interval); return; }
+    elapsed += 0.5;
+    document.getElementById('audio-fill').style.width = Math.min((elapsed / totalSeconds) * 100, 98) + '%';
+    document.getElementById('audio-label').textContent = Math.max(0, Math.round(totalSeconds - elapsed)) + 's left';
+  }, 500);
 
   utterance.onstart = () => {
     document.getElementById('audio-play-btn').textContent = '■';
     document.getElementById('audio-label').textContent = 'Playing...';
   };
-
-  utterance.onend = () => {
-    document.getElementById('audio-play-btn').textContent = '▶';
-    document.getElementById('audio-fill').style.width = '100%';
-    document.getElementById('audio-label').textContent = 'Done';
-  };
-
-  // Approximate progress
-  const wordCount = read.body.split(' ').length;
-  const wordsPerSecond = 2.5;
-  const totalSeconds = wordCount / wordsPerSecond;
-  let elapsed = 0;
-  const interval = setInterval(() => {
-    if (!window.speechSynthesis.speaking) { clearInterval(interval); return; }
-    elapsed += 0.5;
-    const pct = Math.min((elapsed / totalSeconds) * 100, 98);
-    document.getElementById('audio-fill').style.width = pct + '%';
-    const remaining = Math.max(0, Math.round(totalSeconds - elapsed));
-    document.getElementById('audio-label').textContent = remaining + 's left';
-  }, 500);
-
-  utterance.onerror = () => clearInterval(interval);
   utterance.onend = () => {
     clearInterval(interval);
     document.getElementById('audio-play-btn').textContent = '▶';
     document.getElementById('audio-fill').style.width = '100%';
     document.getElementById('audio-label').textContent = 'Done';
   };
-
+  utterance.onerror = () => clearInterval(interval);
   window.speechSynthesis.speak(utterance);
 }
 
 // ── Challenge ──────────────────────────────────────────────────
 function openChallenge() {
   const challenge = getRandomChallenge();
-  if (!challenge) {
-    showToast('No challenges available yet');
-    return;
-  }
-
+  if (!challenge) { showToast('No challenges available yet'); return; }
   STATE.currentChallenge = challenge;
   STATE.highlights = [];
   STATE.activeTag = null;
-
-  // Deactivate all tag buttons
   document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active-tag'));
-
-  // Render plain text
   const body = document.getElementById('challenge-body');
   body.innerHTML = '';
-  const paragraphs = challenge.body.split('\n').filter(p => p.trim().length > 0);
-  paragraphs.forEach(p => {
+  challenge.body.split('\n').filter(p => p.trim()).forEach(p => {
     const el = document.createElement('p');
     el.textContent = p;
     el.style.marginBottom = '16px';
     body.appendChild(el);
   });
-
   showScreen('challenge');
 }
 
-// Tag button selection
 function setActiveTag(type) {
   STATE.activeTag = STATE.activeTag === type ? null : type;
   document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active-tag'));
-  if (STATE.activeTag) {
-    document.querySelector(`.tag-btn.${type}`).classList.add('active-tag');
-  }
+  if (STATE.activeTag) document.querySelector(`.tag-btn.${type}`).classList.add('active-tag');
 }
 
-// Handle text selection in challenge
 function handleChallengeSelection() {
-  if (!STATE.activeTag) {
-    showToast('Select a tag type first');
-    return;
-  }
-
+  if (!STATE.activeTag) { showToast('Select a tag type first'); return; }
   const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0 || selection.toString().trim() === '') return;
-
+  if (!selection || !selection.rangeCount || !selection.toString().trim()) return;
   const selectedText = selection.toString().trim();
-  const type = STATE.activeTag;
-
-  // Wrap selection in highlight span
   try {
     const range = selection.getRangeAt(0);
     const span = document.createElement('span');
-    span.className = `hl-${type}`;
+    span.className = `hl-${STATE.activeTag}`;
     span.textContent = selectedText;
-    span.dataset.type = type;
-    span.title = `Tagged as: ${type}`;
-
+    span.dataset.type = STATE.activeTag;
     range.deleteContents();
     range.insertNode(span);
-
-    STATE.highlights.push({ text: selectedText, type });
+    STATE.highlights.push({ text: selectedText, type: STATE.activeTag });
     selection.removeAllRanges();
-  } catch(e) {
-    // Selection across elements — skip gracefully
-  }
+  } catch(e) {}
 }
 
-// ── Submit challenge ───────────────────────────────────────────
 function submitChallenge() {
   const challenge = STATE.currentChallenge;
   if (!challenge) return;
-
-  const userHighlights = STATE.highlights;
   const knownFlaws = challenge.flaws;
-
-  let correct = 0;
-  let wrongTags = 0;
-  const missed = [];
+  let correct = 0, wrongTags = 0;
   const resultItems = [];
 
-  // Check each known flaw
   knownFlaws.forEach(flaw => {
-    const found = userHighlights.find(h =>
+    const found = STATE.highlights.find(h =>
       h.text.toLowerCase().includes(flaw.excerpt.toLowerCase().slice(0, 20)) ||
       flaw.excerpt.toLowerCase().includes(h.text.toLowerCase().slice(0, 20))
     );
     if (found) {
-      if (found.type === flaw.type || (found.type === 'wrong' && flaw.type === 'wrong') || (found.type === 'misleading' && flaw.type === 'misleading')) {
+      if (found.type === flaw.type) {
         correct++;
         resultItems.push({ type: 'good', label: 'Correctly identified', text: flaw.explanation });
       } else {
-        resultItems.push({ type: 'missed', label: 'Wrong tag', text: `You found this but tagged it as "${found.type}" — it is actually "${flaw.type}". ${flaw.explanation}` });
+        resultItems.push({ type: 'missed', label: 'Wrong tag', text: `Tagged as "${found.type}" — it is actually "${flaw.type}". ${flaw.explanation}` });
       }
     } else {
-      missed.push(flaw);
       resultItems.push({ type: 'missed', label: 'Missed', text: flaw.explanation });
     }
   });
 
-  // Check for false positives (tagged as wrong/misleading but correct content)
-  userHighlights.forEach(h => {
+  STATE.highlights.forEach(h => {
     const matchesFlaw = knownFlaws.find(f =>
       f.excerpt.toLowerCase().includes(h.text.toLowerCase().slice(0, 20)) ||
       h.text.toLowerCase().includes(f.excerpt.toLowerCase().slice(0, 20))
@@ -437,16 +435,12 @@ function submitChallenge() {
     }
   });
 
-  // Score
   const total = knownFlaws.length;
-  const scoreText = correct === total
-    ? `Perfect — you found every flaw.`
-    : correct > 0
-    ? `You identified ${correct} of ${total} flaws.${missed.length ? ' ' + missed.length + ' were missed.' : ''}`
-    : `No flaws correctly identified. Study the explanations below.`;
-
-  // Award coin if at least half correct and no false flags
   const passed = correct >= Math.ceil(total / 2) && wrongTags === 0;
+  const scoreText = correct === total ? 'Perfect — you found every flaw.' :
+    correct > 0 ? `You identified ${correct} of ${total} flaws.` :
+    'No flaws correctly identified. Study the explanations below.';
+
   if (passed) {
     STATE.coins += 1;
     updateStreak();
@@ -454,10 +448,8 @@ function submitChallenge() {
     updateCoinDisplay();
   }
 
-  // Render results
   document.getElementById('score-num').textContent = `${correct}/${total}`;
   document.getElementById('score-text').textContent = scoreText;
-
   const blocks = document.getElementById('result-blocks');
   blocks.innerHTML = '';
   resultItems.forEach(item => {
@@ -466,31 +458,33 @@ function submitChallenge() {
     div.innerHTML = `<div class="result-label">${item.label}</div><div class="result-text">${item.text}</div>`;
     blocks.appendChild(div);
   });
-
-  const reward = document.getElementById('coin-reward');
-  reward.style.display = passed ? 'flex' : 'none';
-
-  document.getElementById('results-home-btn').setAttribute('data-target', 'home');
+  document.getElementById('coin-reward').style.display = passed ? 'flex' : 'none';
   showScreen('results');
 }
 
-// ── Back button handler ────────────────────────────────────────
-document.querySelectorAll('[data-target]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const target = btn.getAttribute('data-target');
-    if (target === 'home') stopSpeech();
-    showScreen(target);
+// ── Knowledge Library ──────────────────────────────────────────
+function renderLibrary() {
+  const list = document.getElementById('library-list');
+  list.innerHTML = '';
+  if (!STATE.knowledgeLibrary.length) {
+    list.innerHTML = `<div class="empty-state"><p>No topics mastered yet.<br>Complete a read and pass the quiz to add topics here.</p></div>`;
+    return;
+  }
+  // Sort newest first
+  const sorted = [...STATE.knowledgeLibrary].sort((a, b) => new Date(b.passedAt) - new Date(a.passedAt));
+  sorted.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'read-card';
+    const date = new Date(item.passedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    card.innerHTML = `
+      <div class="card-cat">${item.domain} · ${item.category} · Passed ${date}</div>
+      <div class="card-title">${item.title}</div>
+    `;
+    list.appendChild(card);
   });
-});
+}
 
-// Dynamic back btn (read screen)
-document.getElementById('read-back-btn').addEventListener('click', function() {
-  stopSpeech();
-  const target = this.getAttribute('data-target') || 'home';
-  showScreen(target);
-});
-
-// ── Home button events ─────────────────────────────────────────
+// ── Event listeners ────────────────────────────────────────────
 document.getElementById('btn-random').addEventListener('click', () => {
   const read = getRandomRead();
   if (!read) { showToast('No reads yet — run sourcing script first'); return; }
@@ -505,7 +499,29 @@ document.getElementById('btn-topic').addEventListener('click', () => {
 
 document.getElementById('btn-challenge').addEventListener('click', openChallenge);
 
-// ── Topic pill events ──────────────────────────────────────────
+document.getElementById('btn-library').addEventListener('click', () => {
+  renderLibrary();
+  showScreen('library');
+});
+
+document.getElementById('impressum-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  showScreen('impressum');
+});
+
+document.querySelectorAll('[data-target]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.getAttribute('data-target');
+    if (target === 'home') stopSpeech();
+    showScreen(target);
+  });
+});
+
+document.getElementById('read-back-btn').addEventListener('click', function() {
+  stopSpeech();
+  showScreen(this.getAttribute('data-target') || 'home');
+});
+
 document.querySelectorAll('.pill').forEach(pill => {
   pill.addEventListener('click', () => {
     document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
@@ -515,37 +531,33 @@ document.querySelectorAll('.pill').forEach(pill => {
   });
 });
 
-// ── Night mode toggle ──────────────────────────────────────────
 document.getElementById('night-toggle').addEventListener('click', () => {
   STATE.nightMode = !STATE.nightMode;
   applyNightMode();
   saveStorage();
 });
 
-// ── Audio button ───────────────────────────────────────────────
 document.getElementById('audio-play-btn').addEventListener('click', toggleSpeech);
 
-// ── Quiz submit ────────────────────────────────────────────────
-document.getElementById('quiz-submit-btn').addEventListener('click', submitQuiz);
+document.getElementById('quiz-submit-btn').addEventListener('click', confirmAnswer);
 
-// ── Challenge tag buttons ──────────────────────────────────────
+document.getElementById('study-again-btn').addEventListener('click', () => {
+  // Scroll back to top of read
+  const scroll = document.getElementById('read-scroll');
+  if (scroll) scroll.scrollTop = 0;
+});
+
 document.getElementById('tag-wrong').addEventListener('click', () => setActiveTag('wrong'));
 document.getElementById('tag-misleading').addEventListener('click', () => setActiveTag('misleading'));
 document.getElementById('tag-correct').addEventListener('click', () => setActiveTag('correct'));
 
-// ── Challenge text selection ───────────────────────────────────
 document.getElementById('challenge-body').addEventListener('mouseup', handleChallengeSelection);
-document.getElementById('challenge-body').addEventListener('touchend', () => {
-  setTimeout(handleChallengeSelection, 100);
-});
+document.getElementById('challenge-body').addEventListener('touchend', () => setTimeout(handleChallengeSelection, 100));
 
-// ── Challenge submit ───────────────────────────────────────────
 document.getElementById('challenge-submit-btn').addEventListener('click', submitChallenge);
-
-// ── Results home button ────────────────────────────────────────
 document.getElementById('results-home-btn').addEventListener('click', () => showScreen('home'));
 
-// ── Register service worker ────────────────────────────────────
+// ── Service worker ─────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(e => console.log('SW failed:', e));

@@ -718,3 +718,114 @@ body.night .toast { background: var(--night-blue); color: var(--night-bg); }
   opacity: 0.55;
   flex-shrink: 0;
 }
+
+/* ── Quiz progress & sequential ───────────────────────────── */
+.quiz-progress {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.45;
+  margin-bottom: 10px;
+}
+
+/* ── Quiz pass / fail ──────────────────────────────────────── */
+.quiz-pass, .quiz-fail {
+  margin: 20px 20px 0;
+  padding: 20px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+.quiz-pass {
+  background: rgba(46,125,82,0.08);
+  border: 1.5px solid rgba(46,125,82,0.4);
+}
+.quiz-fail {
+  background: rgba(139,26,26,0.07);
+  border: 1.5px solid rgba(139,26,26,0.3);
+}
+body.night .quiz-pass { background: rgba(74,168,122,0.08); border-color: rgba(74,168,122,0.4); }
+body.night .quiz-fail { background: rgba(212,96,96,0.07); border-color: rgba(212,96,96,0.3); }
+
+.quiz-pass-icon { font-size: 28px; color: #2e7d52; }
+body.night .quiz-pass-icon { color: #4aa87a; }
+.quiz-fail-icon { font-size: 28px; color: var(--blood); }
+body.night .quiz-fail-icon { color: #d46060; }
+
+.quiz-pass-title, .quiz-fail-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.quiz-pass-title { color: #2e7d52; }
+body.night .quiz-pass-title { color: #4aa87a; }
+.quiz-fail-title { color: var(--blood); }
+body.night .quiz-fail-title { color: #d46060; }
+
+.quiz-pass-sub, .quiz-fail-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 14px;
+  opacity: 0.7;
+}
+.quiz-pass-coin {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--gold);
+  margin-top: 4px;
+  letter-spacing: 0.08em;
+}
+
+/* ── Study again button ────────────────────────────────────── */
+.study-again-btn {
+  background: rgba(139,26,26,0.1) !important;
+  color: var(--blood) !important;
+  border: 1.5px solid rgba(139,26,26,0.35) !important;
+  box-shadow: none !important;
+  margin-top: 10px !important;
+}
+body.night .study-again-btn {
+  background: rgba(126,184,212,0.08) !important;
+  color: var(--night-blue) !important;
+  border-color: rgba(126,184,212,0.3) !important;
+}
+
+/* ── Impressum ─────────────────────────────────────────────── */
+.impressum-body {
+  padding: 20px 24px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.impressum-body strong {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blood);
+  opacity: 0.7;
+}
+body.night .impressum-body strong { color: var(--night-blue); }
+
+.impressum-link-row {
+  text-align: center;
+  padding-bottom: 8px;
+}
+.impressum-link-row a {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blood);
+  opacity: 0.4;
+  text-decoration: none;
+}
+body.night .impressum-link-row a { color: var(--night-blue); }
